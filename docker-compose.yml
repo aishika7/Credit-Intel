@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: credit-intel-backend
+    working_dir: /app
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - creditnet
+
+  frontend:
+    image: node:20-alpine
+    container_name: credit-intel-frontend
+    working_dir: /app
+    env_file:
+      - ./frontend/.env
+    environment:
+      # helpful for live-reload inside containers on Windows/macOS
+      - CHOKIDAR_USEPOLLING=true
+      # expose API URL to Vite
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - creditnet
+
+networks:
+  creditnet:
+    driver: bridge
